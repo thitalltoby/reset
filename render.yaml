@@ -1,0 +1,45 @@
+# UNTESTED STARTING POINT for Render (https://render.com). It has never been applied.
+# Check plan names and options against Render's current documentation before using it.
+# After the first deploy, from the service shell:
+#   npx prisma migrate deploy
+#   SEED_ADMIN_EMAIL=you@example.com SEED_ADMIN_PASSWORD='a-long-password-1' npm run db:seed
+# Then set up a scheduler that POSTs to /api/jobs/run every minute (see docs/DEPLOYMENT.md).
+databases:
+  - name: reset-db
+    databaseName: reset
+    user: reset
+    plan: basic-256mb
+
+services:
+  - type: web
+    name: reset-pharmacy
+    runtime: docker
+    dockerfilePath: ./deploy/Dockerfile
+    healthCheckPath: /api/health
+    plan: starter
+    disk:
+      name: uploads
+      mountPath: /data
+      sizeGB: 10
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATABASE_URL
+        fromDatabase:
+          name: reset-db
+          property: connectionString
+      - key: APP_SECRET
+        generateValue: true
+      - key: CRON_SECRET
+        generateValue: true
+      - key: APP_URL
+        sync: false # set to the public https address, e.g. https://www.example.com
+      - key: STORAGE_DIR
+        value: /data/storage
+      - key: TRUST_PROXY
+        value: "true"
+      - key: EMAIL_FROM
+        sync: false
+      # Optional: a ClamAV daemon reachable from this service
+      - key: CLAMAV_HOST
+        sync: false

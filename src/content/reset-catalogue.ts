@@ -1,0 +1,319 @@
+/**
+ * Reset Pharmacy initial catalogue: the 24 named products from the catalogue brief (entry 25, "Home healthcare essentials",
+ * is a review note and is deliberately NOT a product). Every field is either read from the supplied pack photograph,
+ * taken from a source named in `infoSource`, or left empty. Nothing here is invented:
+ *
+ *  - NAFDAC numbers are all empty: none was visible on a supplied pack or published by the Nigerian retailers consulted.
+ *  - `infoStatus` VERIFIED means directions / ingredients were checked against the product's own label. Only VERIFIED text is
+ *    shown on the public product page. PROVISIONAL text (retailer listings, another market's leaflet) is kept for staff review.
+ *  - Prices are the provisional sample prices from the brief. `priceConfirmed` stays false until a manager confirms them.
+ *  - Photographs are bundled in /public/products. `imageRights` records that they were supplied by the client and that the
+ *    original publisher's permission is NOT yet confirmed (see docs/CATALOGUE_REGISTER.md).
+ */
+
+export type Cls = 'OTC' | 'PHARMACY_ONLY' | 'PRESCRIPTION';
+export type Info = 'AWAITING' | 'PROVISIONAL' | 'VERIFIED';
+
+export interface CatalogueEntry {
+  /** Number in the brief (1–24) */
+  no: number;
+  sku: string;
+  name: string;
+  cat: string;
+  brand: string | null;
+  /** True when the brand and pack were identified from a supplied pack photograph. The pharmacy must still confirm it stocks that exact pack. */
+  brandConfirmed: boolean;
+  manufacturer: string | null;
+  summary: string;
+  description: string;
+  activeIngredients: string | null;
+  strength: string | null;
+  packSize: string | null;
+  howToUse: string | null;
+  warnings: string | null;
+  storage: string | null;
+  cls: Cls;
+  naira: number;
+  /** Sample stock for demonstration mode only */
+  stock: number;
+  reorder?: number;
+  feat?: boolean;
+  tags: string[];
+  /** Fallback line illustration while there is no photograph */
+  art: string;
+  photo: string | null;
+  imageAlt: string | null;
+  imageSource: string | null;
+  packMarket: string | null;
+  infoStatus: Info;
+  infoSource: string;
+  /** What the pharmacy still has to confirm. Feeds docs/CATALOGUE_REGISTER.md */
+  toConfirm: string[];
+}
+
+const SUPPLIED = 'Supplied by Reset Pharmacy’s agency (Dindu Digitals) on 24 Oct 2026 as a product photograph. Original publisher not recorded; permission to reuse not confirmed.';
+const NO_NAFDAC = 'NAFDAC registration number';
+const PRICE = 'Selling price (sample price from the brief)';
+
+const note = (m: string) => m;
+
+export const RESET_CATALOGUE: CatalogueEntry[] = [
+  {
+    no: 1, sku: 'RP-001', name: 'Cough syrup for dry cough', cat: 'cold-cough-flu', brand: 'Benylin', brandConfirmed: true, manufacturer: null,
+    summary: 'Benylin Dry Cough syrup, for irritating dry coughs.',
+    description: note('Benylin Dry Cough is a syrup for irritating dry coughs. The pack names dextromethorphan as the active ingredient.\n\nDose, bottle size and age limits are printed on the pack and are not repeated here. This product is supplied after a pharmacist has checked it is suitable, particularly if it is for a child.'),
+    activeIngredients: null, strength: null, packSize: null, howToUse: null, warnings: null, storage: null,
+    cls: 'PHARMACY_ONLY', naira: 1800, stock: 45, feat: true, tags: ['cough', 'dry cough', 'benylin', 'dextromethorphan'], art: 'syrup',
+    photo: '/products/benylin-dry-cough-syrup.webp', imageAlt: 'Benylin Dry Cough syrup: green and grey carton beside a dark glass bottle with a white cap', imageSource: SUPPLIED, packMarket: 'Not stated on the pack',
+    infoStatus: 'AWAITING', infoSource: 'Pack photograph names dextromethorphan only; strength and volume are cut off or illegible. The Benylin leaflet found online (emc, UK) is for the Night variant (diphenhydramine + dextromethorphan) and was NOT used.',
+    toConfirm: ['Exact variant and volume on the pack the pharmacy stocks', 'Dextromethorphan strength per 5ml', 'Directions and age limits from the leaflet', 'Whether it may be sold without pharmacist review (set to “pharmacist only” until confirmed)', NO_NAFDAC, PRICE],
+  },
+  {
+    no: 2, sku: 'RP-002', name: 'Digital thermometer', cat: 'devices-tests', brand: 'Omron', brandConfirmed: true, manufacturer: 'OMRON Healthcare',
+    summary: 'Omron digital thermometer with a flexible tip and a digital display.',
+    description: note('A digital thermometer from Omron with a flexible tip and a digital display.'),
+    activeIngredients: null, strength: null, packSize: '1 thermometer', howToUse: null, warnings: null, storage: null,
+    cls: 'OTC', naira: 3800, stock: 23, feat: true, tags: ['temperature', 'fever', 'omron', 'thermometer'], art: 'thermometer',
+    photo: '/products/omron-flex-temp-digital-thermometer.webp', imageAlt: 'Omron digital thermometer with a blue flexible tip, white body and a display reading 36.8 degrees', imageSource: SUPPLIED, packMarket: 'Not stated',
+    infoStatus: 'PROVISIONAL', infoSource: 'Omron UK product page for Flex Temp Smart MC-343F-E (flexible tip, waterproof, memory, beeper, auto switch-off, 3-year warranty, LR41 battery). The photograph does not show the model number, so these specifications are not published.',
+    toConfirm: ['Model number (MC-343F-E or other)', 'Warranty and battery details for the stocked model', NO_NAFDAC + ' (if the device is registered)', PRICE],
+  },
+  {
+    no: 3, sku: 'RP-003', name: 'Fabric plasters, assorted sizes', cat: 'first-aid', brand: 'Tesco Health', brandConfirmed: true, manufacturer: null,
+    summary: 'Fabric plasters in assorted sizes, light skin-tone shade. Pack of 40.',
+    description: note('Fabric plasters in assorted sizes, in the “light” skin-tone shade. The pack holds 40.'),
+    activeIngredients: null, strength: null, packSize: '40 assorted', howToUse: null, warnings: null, storage: null,
+    cls: 'OTC', naira: 1500, stock: 90, feat: true, tags: ['plasters', 'cuts', 'dressing'], art: 'bandage',
+    photo: '/products/tesco-health-fabric-plasters-light-40.webp', imageAlt: 'Tesco Health Fabric Plasters, light shade, box of 40 assorted: green carton showing three plaster shapes', imageSource: SUPPLIED, packMarket: 'United Kingdom (Tesco own brand)',
+    infoStatus: 'AWAITING', infoSource: 'Read from the pack photograph (name, shade, count). A Tesco “Dark” variant exists in UK listings. No leaflet text was sourced.',
+    toConfirm: ['That the pharmacy really stocks a UK Tesco own-brand pack, or a local equivalent', 'Which shade(s) to stock', 'Manufacturer', PRICE],
+  },
+  {
+    no: 4, sku: 'RP-004', name: 'Fluoride toothpaste', cat: 'oral-care', brand: 'Amodent', brandConfirmed: true, manufacturer: null,
+    summary: 'Amodent Original fluoride toothpaste, 100ml.',
+    description: note('Amodent Original toothpaste in a 100ml carton. The pack describes it as offering maximum fluoride protection.'),
+    activeIngredients: null, strength: null, packSize: '100ml', howToUse: null, warnings: null, storage: null,
+    cls: 'OTC', naira: 1300, stock: 100, feat: false, tags: ['toothpaste', 'fluoride', 'teeth', 'amodent'], art: 'tooth',
+    photo: '/products/amodent-original-toothpaste-100ml.webp', imageAlt: 'Amodent Original toothpaste, 100ml red carton with blue and white lettering', imageSource: SUPPLIED, packMarket: 'Hungary (Hungarian-language pack)',
+    infoStatus: 'PROVISIONAL', infoSource: 'Kifli.hu retailer listing: 1450 ppm fluoride as sodium monofluorophosphate; pea-sized amount, brush at least twice daily, not for children under 7; manufacturer given as Unilever Asia. Retailer text, not the pack label, so not published.',
+    toConfirm: ['Whether the Nigerian-market pack is the same product', 'Fluoride level and directions from the stocked pack', 'Manufacturer', NO_NAFDAC, PRICE],
+  },
+  {
+    no: 5, sku: 'RP-005', name: 'Home first-aid kit', cat: 'first-aid', brand: null, brandConfirmed: false, manufacturer: null,
+    summary: 'A home first-aid kit. Brand and contents to be confirmed.',
+    description: note('A first-aid kit for the home. The brand and the exact contents have not been confirmed yet, so no contents list is shown.'),
+    activeIngredients: null, strength: null, packSize: null, howToUse: null, warnings: null, storage: null,
+    cls: 'OTC', naira: 9800, stock: 9, feat: false, tags: ['kit', 'first aid'], art: 'firstaid', photo: null, imageAlt: null, imageSource: null, packMarket: null,
+    infoStatus: 'AWAITING', infoSource: 'No photograph or brand supplied.',
+    toConfirm: ['Brand and kit model', 'Contents list', 'Product photograph', PRICE],
+  },
+  {
+    no: 6, sku: 'RP-006', name: 'Oral rehydration salts', cat: 'stomach-digestion', brand: 'Trioral', brandConfirmed: true, manufacturer: null,
+    summary: 'Trioral oral rehydration salts, single 20.5g sachet.',
+    description: note('Trioral oral rehydration salts in a single 20.5g (0.72oz) sachet. The sachet is labelled “New WHO formula” and “dietary supplement”.\n\nFor diarrhoea or vomiting, especially in a child or an older person, ask the pharmacist which rehydration product is right and how to mix it.'),
+    activeIngredients: null, strength: null, packSize: '1 sachet, 20.5g', howToUse: null, warnings: null, storage: null,
+    cls: 'OTC', naira: 1600, stock: 70, feat: false, tags: ['ors', 'rehydration', 'diarrhoea', 'dehydration'], art: 'sachet',
+    photo: '/products/trioral-oral-rehydration-salts-sachet.webp', imageAlt: 'Trioral oral rehydration salts sachet, white with blue lettering and a water-drop graphic', imageSource: SUPPLIED, packMarket: 'United States (“dietary supplement” labelling, ounces)',
+    infoStatus: 'AWAITING', infoSource: 'Read from the sachet photograph only. Ingredients and directions are not visible. Searches returned retailer listings, not a manufacturer leaflet.',
+    toConfirm: ['Whether a US dietary-supplement sachet is the intended product, or a NAFDAC-registered ORS', 'Ingredients and mixing directions', 'Pack size to sell (single sachet vs box)', NO_NAFDAC, PRICE],
+  },
+  {
+    no: 7, sku: 'RP-007', name: 'Paracetamol 500mg tablets', cat: 'pain-fever', brand: 'M&B', brandConfirmed: true, manufacturer: 'May & Baker',
+    summary: 'M&B Paracetamol 500mg tablets: 8 strips of 12.',
+    description: note('M&B Paracetamol 500mg B.P. tablets, 8 strips of 12 tablets (96 tablets). The box says the tablets are effective on pains, aches and fever and gentle on the stomach.\n\nThe pack carries the “80 years heritage of quality” mark.'),
+    activeIngredients: 'Paracetamol 500mg B.P. per tablet', strength: '500mg', packSize: '8 x 12 tablets', howToUse: 'Adults: 1 to 2 tablets every 4 to 6 hours as needed; do not exceed 8 tablets in 24 hours. Swallow whole with water. A health professional should set the dose for children. (Retailer listing: check against the pack leaflet before publishing.)', warnings: 'Do not exceed the stated dose. Possible side effects include nausea and stomach upset; rarely allergic reactions, severe skin reactions or liver damage with prolonged use. Avoid alcohol. (Retailer listing: check against the pack leaflet.)', storage: 'Keep in a cool, dry place away from sunlight and out of reach of children. (Retailer listing.)',
+    cls: 'OTC', naira: 600, stock: 120, feat: true, tags: ['paracetamol', 'headache', 'fever', 'pain', 'painkiller', 'm&b'], art: 'pill',
+    photo: '/products/mb-paracetamol-500mg-tablets-8x12.webp', imageAlt: 'M&B Paracetamol 500mg: red carton beside a silver blister strip of white tablets', imageSource: SUPPLIED + ' Studio backdrop whitened.', packMarket: 'Nigeria (M&B brand)',
+    infoStatus: 'PROVISIONAL', infoSource: 'Pack photograph: name, 500mg B.P., 8 x 12 tablets. Directions and warnings from the GoMed.ng listing for “M&B PCM 500mg 8 x 12 tablet” (retailer text, last known price ₦200; no manufacturer line or NAFDAC number given).',
+    toConfirm: ['Directions and warnings from the pack leaflet', 'Manufacturer line printed on the carton', NO_NAFDAC, 'Price: the sample ₦600 was for a pack of 16; a 96-tablet box (or a single strip) needs its own price', 'A second supplied photo (Bristol UK paracetamol, 16 tablets) is a different brand and was NOT used'],
+  },
+  {
+    no: 8, sku: 'RP-008', name: 'Saline nasal spray', cat: 'cold-cough-flu', brand: null, brandConfirmed: false, manufacturer: null,
+    summary: 'Saline nasal spray for a blocked nose. Brand to be confirmed.',
+    description: note('A saline (salt-water) nasal spray. The brand, strength and volume have not been confirmed yet.'),
+    activeIngredients: null, strength: null, packSize: null, howToUse: null, warnings: null, storage: null,
+    cls: 'OTC', naira: 2200, stock: 30, feat: false, tags: ['blocked nose', 'congestion', 'saline', 'nasal'], art: 'spray', photo: null, imageAlt: null, imageSource: null, packMarket: null,
+    infoStatus: 'AWAITING', infoSource: 'No photograph or brand supplied. The supplied Flo Baby item is a baby nose-drops product and is listed separately (no. 18).',
+    toConfirm: ['Brand, volume and formulation (isotonic or hypertonic)', 'Product photograph', NO_NAFDAC, PRICE],
+  },
+  {
+    no: 9, sku: 'RP-009', name: 'Sunscreen SPF 50', cat: 'skin-sun', brand: null, brandConfirmed: false, manufacturer: null,
+    summary: 'Sunscreen with SPF 50. Brand to be confirmed.',
+    description: note('A sunscreen with an SPF of 50. The brand, size and any other claims (such as water resistance or UVA rating) have not been confirmed yet.'),
+    activeIngredients: null, strength: 'SPF 50', packSize: null, howToUse: null, warnings: null, storage: null,
+    cls: 'OTC', naira: 6500, stock: 26, feat: false, tags: ['sun', 'spf', 'sunscreen'], art: 'sun', photo: null, imageAlt: null, imageSource: null, packMarket: null,
+    infoStatus: 'AWAITING', infoSource: 'No photograph or brand supplied.',
+    toConfirm: ['Brand, size and UVA rating', 'Product photograph', NO_NAFDAC, PRICE],
+  },
+  {
+    no: 10, sku: 'RP-010', name: 'Vitamin C 500mg effervescent tablets', cat: 'vitamins-supplements', brand: 'Dr.Max', brandConfirmed: true, manufacturer: null,
+    summary: 'Dr.Max Vitamin C 500mg orange-flavour effervescent tablets, 20.',
+    description: note('Dr.Max Vitamin C 500mg effervescent tablets, orange flavour, tube of 20. The tube is marked as a food supplement.'),
+    activeIngredients: null, strength: '500mg', packSize: 'Tube of 20 tablets', howToUse: null, warnings: null, storage: null,
+    cls: 'OTC', naira: 2500, stock: 64, feat: true, tags: ['vitamin c', 'immunity', 'effervescent', 'dr.max'], art: 'vitamin',
+    photo: '/products/dr-max-vitamin-c-500mg-effervescent-20.webp', imageAlt: 'Dr.Max Vitamin C 500mg orange-flavour effervescent tablets in a white and orange tube', imageSource: SUPPLIED, packMarket: 'Serbia / Balkans (Serbian-language pack)',
+    infoStatus: 'AWAITING', infoSource: 'Read from the tube photograph (500mg, orange, 20 effervescent tablets, “Dr.Max”). Searches found Dr.Max pharmacy-chain listings for other pack types but no leaflet for this exact tube.',
+    toConfirm: ['That this foreign-language private-label tube is what the pharmacy will stock', 'Directions and ingredients from the stocked pack', 'Importer / manufacturer', NO_NAFDAC, PRICE],
+  },
+  {
+    no: 11, sku: 'RP-011', name: 'Alcohol hand sanitiser', cat: 'hygiene-protection', brand: null, brandConfirmed: false, manufacturer: null,
+    summary: 'Alcohol-based hand sanitiser. Brand to be confirmed.',
+    description: note('An alcohol-based hand sanitiser. The brand, volume and alcohol percentage have not been confirmed yet.'),
+    activeIngredients: null, strength: null, packSize: null, howToUse: null, warnings: null, storage: null,
+    cls: 'OTC', naira: 1600, stock: 58, feat: false, tags: ['sanitiser', 'hygiene', 'alcohol'], art: 'spray', photo: null, imageAlt: null, imageSource: null, packMarket: null,
+    infoStatus: 'AWAITING', infoSource: 'No photograph or brand supplied.',
+    toConfirm: ['Brand, volume and alcohol percentage', 'Product photograph', NO_NAFDAC, PRICE],
+  },
+  {
+    no: 12, sku: 'RP-012', name: 'Alcohol-free mouthwash', cat: 'oral-care', brand: null, brandConfirmed: false, manufacturer: null,
+    summary: 'Alcohol-free mouthwash. Brand to be confirmed.',
+    description: note('An alcohol-free mouthwash. The brand, volume and any fluoride content have not been confirmed yet.'),
+    activeIngredients: null, strength: null, packSize: null, howToUse: null, warnings: null, storage: null,
+    cls: 'OTC', naira: 2600, stock: 32, feat: false, tags: ['mouthwash', 'oral care'], art: 'bottle', photo: null, imageAlt: null, imageSource: null, packMarket: null,
+    infoStatus: 'AWAITING', infoSource: 'No photograph or brand supplied.',
+    toConfirm: ['Brand, volume and active ingredients', 'Product photograph', NO_NAFDAC, PRICE],
+  },
+  {
+    no: 13, sku: 'RP-013', name: 'Antacid chewable tablets, mint', cat: 'stomach-digestion', brand: 'Rolaids', brandConfirmed: true, manufacturer: 'The Procter & Gamble Manufacturing Company',
+    summary: 'Rolaids Original mint chewable antacid tablets, 96.',
+    description: note('Rolaids Original chewable antacid tablets, mint flavour, bottle of 96. They are used for heartburn, acid indigestion and sour or upset stomach.'),
+    activeIngredients: 'Calcium carbonate 675mg and magnesium hydroxide 135mg per tablet', strength: '675mg calcium carbonate + 135mg magnesium hydroxide', packSize: 'Bottle of 96 chewable tablets',
+    howToUse: 'Adults and children 12 years and over: chew 2 to 4 tablets as symptoms occur, or as directed by a doctor.',
+    warnings: 'Do not take more than 10 tablets in 24 hours. Do not use the maximum dose for more than 2 weeks except under a doctor’s advice and supervision. Ask a doctor before use if you have kidney disease or a magnesium-restricted diet. Ask a doctor or pharmacist if you take a prescription medicine, as antacids can interact with some. If pregnant or breast-feeding, ask a health professional before use.',
+    storage: 'Store at room temperature, 20–25°C.',
+    cls: 'OTC', naira: 1300, stock: 55, feat: true, tags: ['heartburn', 'indigestion', 'antacid', 'rolaids'], art: 'pill',
+    photo: '/products/rolaids-original-antacid-96-chewable.webp', imageAlt: 'Rolaids Original mint chewable tablets: blue and white bottle labelled 96 chewable tablets', imageSource: SUPPLIED, packMarket: 'United States (NDC-labelled pack)',
+    infoStatus: 'VERIFIED', infoSource: 'Drug Facts label text for “Rolaids ORIGINAL, Mint Flavored, 96 chewable tablets” (NDC 84126-324, revised 12/2025) read at otclabels.com and matched to the pack photograph (96 count, Strong · Fast · Heartburn Relief). Label is the US label.',
+    toConfirm: ['That the pharmacy stocks this US pack (a different market’s label would carry different wording)', NO_NAFDAC, 'Price: sample ₦1,300 was for a pack of 48; this pack holds 96'],
+  },
+  {
+    no: 14, sku: 'RP-014', name: 'Antifungal cream', cat: 'skin-sun', brand: null, brandConfirmed: false, manufacturer: null,
+    summary: 'Antifungal cream for fungal skin infections. Brand and active ingredient to be confirmed.',
+    description: note('An antifungal cream for fungal skin infections. The brand, active ingredient and tube size have not been confirmed yet, so ask the pharmacist which product it is and whether it suits you.'),
+    activeIngredients: null, strength: null, packSize: null, howToUse: null, warnings: null, storage: null,
+    cls: 'OTC', naira: 2800, stock: 19, feat: false, tags: ['fungal', 'athlete’s foot', 'cream'], art: 'tube', photo: null, imageAlt: null, imageSource: null, packMarket: null,
+    infoStatus: 'AWAITING', infoSource: 'No photograph or brand supplied.',
+    toConfirm: ['Brand, active ingredient and tube size', 'Whether it may be sold without pharmacist review', 'Product photograph', NO_NAFDAC, PRICE],
+  },
+  {
+    no: 15, sku: 'RP-015', name: 'Antihistamine allergy tablets', cat: 'cold-cough-flu', brand: 'Zyrtec', brandConfirmed: true, manufacturer: 'Kenvue Brands LLC',
+    summary: 'Zyrtec Allergy cetirizine 10mg tablets, 30. Supplied after a pharmacist check.',
+    description: note('Zyrtec Allergy 10mg cetirizine hydrochloride antihistamine tablets, 30 per pack. The pack describes 24-hour relief of sneezing, runny nose, itchy and watery eyes and an itchy throat or nose from indoor and outdoor allergies.\n\nThis product is supplied after a pharmacist has checked it is suitable for you.'),
+    activeIngredients: 'Cetirizine hydrochloride 10mg per tablet', strength: '10mg', packSize: '30 tablets',
+    howToUse: 'Adults and children 6 years and over: one 10mg tablet once daily; do not take more than one 10mg tablet in 24 hours. Adults 65 and over, children under 6, and people with liver or kidney disease should ask a doctor first. (US label text: confirm against the stocked pack.)',
+    warnings: 'Do not use if you have ever had an allergic reaction to cetirizine or any of the ingredients, or to an antihistamine containing hydroxyzine. Ask a doctor if you have liver or kidney disease. Ask a doctor or pharmacist if you take tranquillisers or sedatives. Drowsiness may occur; avoid alcohol; take care driving or using machinery. Stop use and get medical help if an allergic reaction occurs. Pregnant: ask a health professional. Breast-feeding: not recommended.',
+    storage: 'Store at 20–25°C. Do not use if the pouch is torn or damaged.',
+    cls: 'PHARMACY_ONLY', naira: 3500, stock: 22, feat: false, tags: ['allergy', 'hay fever', 'antihistamine', 'cetirizine', 'zyrtec'], art: 'pill',
+    photo: '/products/zyrtec-allergy-cetirizine-10mg-30-tablets.webp', imageAlt: 'Zyrtec Allergy cetirizine 10mg, 30 tablets: green and red retail pack with a small bottle', imageSource: SUPPLIED, packMarket: 'United States (NDC 50580-726-36)',
+    infoStatus: 'PROVISIONAL', infoSource: 'Drug Facts text read from a repackager’s listing (otclabels.com, source item code NDC 50580-726, Kenvue) rather than from the photographed 30-count pack itself. Same Kenvue label family, but not the pictured pack.',
+    toConfirm: ['That the pharmacy stocks this US pack or the Nigerian-market Zyrtec', 'Label text from the stocked pack, then mark verified', 'Classification: kept “pharmacist only”', NO_NAFDAC, PRICE],
+  },
+  {
+    no: 16, sku: 'RP-016', name: 'Antiseptic liquid', cat: 'first-aid', brand: 'Dettol', brandConfirmed: true, manufacturer: 'Reckitt',
+    summary: 'Dettol antiseptic liquid, 100ml.',
+    description: note('Dettol antiseptic liquid, 100ml bottle. The label names chloroxylenol and says it gives effective protection against germs that cause infection. For external use: follow the dilution directions on the bottle.'),
+    activeIngredients: 'Chloroxylenol (concentration not visible on the photographed pack)', strength: null, packSize: '100ml', howToUse: null, warnings: null, storage: null,
+    cls: 'OTC', naira: 1700, stock: 44, feat: true, tags: ['antiseptic', 'dettol', 'cuts', 'disinfectant'], art: 'bottle',
+    photo: '/products/dettol-antiseptic-liquid-100ml.webp', imageAlt: 'Dettol antiseptic liquid, 100ml amber bottle with a white cap and green and white label', imageSource: SUPPLIED, packMarket: 'Pakistan (Infection Control Society Pakistan seal on label)',
+    infoStatus: 'AWAITING', infoSource: 'The UK Dettol Liquid leaflet (4.8% w/v chloroxylenol, PL 00063/0766) was found but belongs to a different product licence; its dilution directions were NOT applied to this pack.',
+    toConfirm: ['Version stocked and the concentration on its label', 'Dilution directions and warnings from that label', NO_NAFDAC, PRICE],
+  },
+  {
+    no: 17, sku: 'RP-017', name: 'Baby feeding bottle', cat: 'baby-child', brand: null, brandConfirmed: false, manufacturer: null,
+    summary: 'Baby feeding bottle. Brand and size to be confirmed.',
+    description: note('A baby feeding bottle. The brand, capacity, material and teat flow rate have not been confirmed yet.'),
+    activeIngredients: null, strength: null, packSize: null, howToUse: null, warnings: null, storage: null,
+    cls: 'OTC', naira: 3900, stock: 0, feat: false, tags: ['feeding', 'baby', 'bottle'], art: 'baby', photo: null, imageAlt: null, imageSource: null, packMarket: null,
+    infoStatus: 'AWAITING', infoSource: 'No photograph or brand supplied.',
+    toConfirm: ['Brand, capacity, material and teat type', 'Product photograph', PRICE],
+  },
+  {
+    no: 18, sku: 'RP-018', name: 'Baby saline nose drops', cat: 'baby-child', brand: 'Flo', brandConfirmed: true, manufacturer: null,
+    summary: 'Flo Baby saline nasal drops, 15ml. Preservative free.',
+    description: note('Flo Baby saline nasal drops, 15ml. The pack says the drops are preservative free, non-medicated and isotonic, to clear a congested nose in newborn babies and toddlers quickly and gently.'),
+    activeIngredients: 'Sodium chloride (isotonic saline), preservative free', strength: null, packSize: '15ml',
+    howToUse: 'Support the baby comfortably, place drops under each nostril, then wipe the nose gently with a soft clean tissue. Do not insert the nozzle into the nostril. (Australian retailer text: confirm against the stocked pack.)',
+    warnings: 'Discard three months after first use. Do not share between children. If congestion persists, see a healthcare professional. (Australian retailer text.)', storage: null,
+    cls: 'OTC', naira: 2100, stock: 24, feat: false, tags: ['baby', 'nose', 'saline', 'blocked nose', 'flo'], art: 'drops',
+    photo: '/products/flo-baby-saline-nasal-drops-15ml.webp', imageAlt: 'Flo Baby saline nasal drops, 15ml: teal and yellow carton beside a white pump bottle', imageSource: SUPPLIED, packMarket: 'Australia (retailer listings; Australian email address on the carton)',
+    infoStatus: 'PROVISIONAL', infoSource: 'Chemist Warehouse (Australia) listing: sodium chloride only, no preservatives; directions and warnings as above; trademarks owned by or licensed to the Aspen Group. Retailer text, not the pack leaflet.',
+    toConfirm: ['That the pharmacy stocks this Australian pack or a Nigerian-market equivalent', 'Directions from the stocked pack', 'Manufacturer', NO_NAFDAC, 'Price: sample ₦2,100 was for 10 x 5ml ampoules; this pack is a 15ml bottle'],
+  },
+  {
+    no: 19, sku: 'RP-019', name: 'Burn gel', cat: 'first-aid', brand: 'Burnaid', brandConfirmed: true, manufacturer: 'Mundicare',
+    summary: 'Burnaid burn gel, 25g tube. Hydrogel for minor burns, scalds and sunburn.',
+    description: note('Burnaid burn gel in a 25g tube, from Mundicare. The pack describes it as a hydrogel for minor burns, scalds and sunburn that cools and soothes, helps relieve pain and has an antiseptic formula.'),
+    activeIngredients: 'Melaleuca (tea tree) oil 40mg/g', strength: '40mg/g melaleuca oil', packSize: '25g tube',
+    howToUse: '1. Place the burn under cold running water for 20 minutes. 2. Apply the gel generously to the burn area. Do not rub. 3. If necessary, cover with a clean dressing. Repeat the application in 30 minutes or as needed.',
+    warnings: null, storage: null,
+    cls: 'OTC', naira: 2300, stock: 4, reorder: 6, feat: true, tags: ['burn', 'scald', 'sunburn', 'burnaid', 'first aid'], art: 'tube',
+    photo: '/products/burnaid-burn-gel-25g.webp', imageAlt: 'Burnaid burn gel: blue and white carton with a 25g white tube standing in front', imageSource: SUPPLIED, packMarket: 'Australia (AUST L registration printed on pack)',
+    infoStatus: 'VERIFIED', infoSource: 'Directions, active ingredient and strength read from the carton and tube panels in the supplied photograph. The pack shows no warnings panel, so none is shown beyond the general safety text. Australian retailer pages add “external use only; minor burns only; seek medical advice for serious burns” (not on the photographed panel).',
+    toConfirm: ['That the pharmacy stocks this Australian pack', 'Warnings from the leaflet', 'Storage temperature', NO_NAFDAC, PRICE],
+  },
+  {
+    no: 20, sku: 'RP-020', name: 'Children’s paracetamol suspension', cat: 'baby-child', brand: null, brandConfirmed: false, manufacturer: null,
+    summary: 'Children’s paracetamol suspension. Brand and strength to be confirmed.',
+    description: note('A paracetamol suspension for children. The brand, strength per 5ml and bottle size have not been confirmed yet. The dose for a child depends on age and weight, so ask the pharmacist and follow the label.'),
+    activeIngredients: 'Paracetamol (strength to be confirmed)', strength: null, packSize: null, howToUse: null, warnings: null, storage: null,
+    cls: 'OTC', naira: 1900, stock: 40, feat: false, tags: ['children', 'fever', 'paracetamol', 'suspension'], art: 'syrup', photo: null, imageAlt: null, imageSource: null, packMarket: null,
+    infoStatus: 'AWAITING', infoSource: 'No photograph or brand supplied.',
+    toConfirm: ['Brand, strength per 5ml and bottle size', 'Age and weight dosing table from the label', 'Whether it may be sold without pharmacist review', 'Product photograph', NO_NAFDAC, PRICE],
+  },
+  {
+    no: 21, sku: 'RP-021', name: 'Cold and flu relief capsules', cat: 'cold-cough-flu', brand: 'Coldcap', brandConfirmed: true, manufacturer: null,
+    summary: 'Coldcap Original capsules for colds, flu and congestion. Supplied after a pharmacist check.',
+    description: note('Coldcap Original capsules, blister pack of 12. The box lists cold, flu, sinus headache, runny nose and nasal and chest congestion.\n\nThe active ingredients have not been confirmed, so this product is supplied through the pharmacist.'),
+    activeIngredients: null, strength: null, packSize: '12 capsules', howToUse: null, warnings: null, storage: null,
+    cls: 'PHARMACY_ONLY', naira: 2100, stock: 50, feat: false, tags: ['cold', 'flu', 'congestion', 'coldcap', 'sinus'], art: 'capsule',
+    photo: '/products/coldcap-original-capsules-12.webp', imageAlt: 'Coldcap Original capsules: blue and white carton marked 12 capsules blister packed', imageSource: SUPPLIED + ' The source image is low resolution.', packMarket: 'Not stated',
+    infoStatus: 'AWAITING', infoSource: 'Pack photograph only. One retailer page (portalpharmacy.ke) lists paracetamol 400mg, caffeine 30mg, pseudoephedrine 30mg and chlorpheniramine 4mg but contradicts itself (also names phenylephrine and calls it a solution), so it was NOT used.',
+    toConfirm: ['Composition printed on the pack (pseudoephedrine is a controlled ingredient in some markets)', 'Manufacturer', 'Directions and warnings', 'Higher-resolution photograph', NO_NAFDAC, PRICE + ' (sample ₦2,100 was for 16 capsules; the pack holds 12)'],
+  },
+  {
+    no: 22, sku: 'RP-022', name: 'Crepe bandage 7.5cm', cat: 'first-aid', brand: null, brandConfirmed: false, manufacturer: null,
+    summary: 'Crepe bandage, 7.5cm wide. Brand to be confirmed.',
+    description: note('A crepe bandage, 7.5cm wide, for support. The brand and roll length have not been confirmed yet.'),
+    activeIngredients: null, strength: null, packSize: null, howToUse: null, warnings: null, storage: null,
+    cls: 'OTC', naira: 900, stock: 41, feat: false, tags: ['bandage', 'sprain', 'support'], art: 'bandage', photo: null, imageAlt: null, imageSource: null, packMarket: null,
+    infoStatus: 'AWAITING', infoSource: 'No photograph or brand supplied.',
+    toConfirm: ['Brand and roll length', 'Product photograph', PRICE],
+  },
+  {
+    no: 23, sku: 'RP-023', name: 'Daily moisturising lotion', cat: 'skin-sun', brand: null, brandConfirmed: false, manufacturer: null,
+    summary: 'Daily moisturising lotion. Brand and size to be confirmed.',
+    description: note('A daily moisturising lotion. The brand, size and ingredients have not been confirmed yet.'),
+    activeIngredients: null, strength: null, packSize: null, howToUse: null, warnings: null, storage: null,
+    cls: 'OTC', naira: 3400, stock: 36, feat: false, tags: ['moisturiser', 'lotion', 'dry skin'], art: 'drop', photo: null, imageAlt: null, imageSource: null, packMarket: null,
+    infoStatus: 'AWAITING', infoSource: 'No photograph or brand supplied.',
+    toConfirm: ['Brand, size and ingredient list', 'Product photograph', PRICE],
+  },
+  {
+    no: 24, sku: 'RP-024', name: 'Disposable face masks', cat: 'hygiene-protection', brand: null, brandConfirmed: false, manufacturer: null,
+    summary: 'Disposable face masks. Brand and pack to be confirmed.',
+    description: note('Disposable face masks. The brand, number per box and mask type have not been confirmed yet.'),
+    activeIngredients: null, strength: null, packSize: null, howToUse: null, warnings: null, storage: null,
+    cls: 'OTC', naira: 3500, stock: 44, feat: false, tags: ['mask', 'face mask', 'hygiene'], art: 'mask', photo: null, imageAlt: null, imageSource: null, packMarket: null,
+    infoStatus: 'AWAITING', infoSource: 'No photograph or brand supplied.',
+    toConfirm: ['Brand, count per box and mask type', 'Product photograph', PRICE],
+  },
+];
+
+/** Entry 25 in the brief. A review note, not a product: never created, never shown. */
+export const BRIEF_REVIEW_NOTE = 'Home healthcare essentials: review the catalogue for duplicates; do not create a fictional product.';
+
+/** Supplied photographs that are deliberately not used. Kept as masters only. */
+export const UNUSED_SUPPLIED_IMAGES = [
+  { file: 'assets/product-masters/bristol-paracetamol-500mg-tablets-16.webp', reason: 'Bristol (UK) Paracetamol Tablets BP 500mg, 16 tablets. Same medicine as no. 7 but a different brand and pack; using it would duplicate the entry or mislabel M&B.' },
+];
+
+export function catalogueGaps(e: CatalogueEntry): string[] {
+  const g: string[] = [];
+  if (!e.photo) g.push('No product photograph');
+  if (!e.brand) g.push('Brand not confirmed');
+  if (!e.manufacturer) g.push('Manufacturer');
+  if (!e.packSize) g.push('Pack size');
+  if (e.infoStatus !== 'VERIFIED') g.push(`Directions and warnings not verified (${e.infoStatus.toLowerCase()})`);
+  g.push(NO_NAFDAC);
+  return g;
+}

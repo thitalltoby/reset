@@ -1,0 +1,817 @@
+// Reset Pharmacy — PostgreSQL schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Identity and access ───────────────────────────────────────────
+
+enum Role {
+  SUPER_ADMIN
+  MANAGER
+  PHARMACIST
+  STAFF
+  EDITOR
+  CUSTOMER
+}
+
+model User {
+  id               String    @id @default(cuid())
+  email            String    @unique
+  name             String
+  phone            String?
+  passwordHash     String
+  role             Role      @default(CUSTOMER)
+  isActive         Boolean   @default(true)
+  emailVerifiedAt  DateTime?
+  failedLogins     Int       @default(0)
+  lockedUntil      DateTime?
+  lastLoginAt      DateTime?
+  /// When the customer agreed to receive marketing messages. Null = never agreed. Service messages (orders, prescriptions) are sent regardless.
+  marketingOptInAt DateTime?
+  /// AES-256-GCM encrypted TOTP secret (staff two-factor sign-in). Set during enrolment, active once mfaEnabledAt is set.
+  mfaSecretEnc     String?
+  mfaEnabledAt     DateTime?
+  /// Last accepted 30-second time step; a code can be used only once
+  mfaLastStep      Int?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  sessions          Session[]
+  mfaRecoveryCodes  MfaRecoveryCode[]
+  mfaChallenges     MfaChallenge[]
+  authTokens        AuthToken[]
+  addresses         Address[]
+  orders            Order[]
+  favourites        Favourite[]
+  carts             Cart[]
+  prescriptions     Prescription[] @relation("RxOwner")
+  assignedRx        Prescription[] @relation("RxAssignee")
+  assignedEnquiries Enquiry[]      @relation("EnquiryAssignee")
+
+  @@index([role, isActive])
+}
+
+model MfaRecoveryCode {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// SHA-256 of the normalised code; the code itself is shown once at enrolment
+  codeHash  String
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId])
+}
+
+/// A password-verified sign-in waiting for its second factor. Not a session.
+model MfaChallenge {
+  id        String   @id @default(cuid())
+  tokenHash String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  next      String?
+  attempts  Int      @default(0)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model Session {
+  id         String   @id @default(cuid())
+  /// SHA-256 of the opaque cookie token; the raw token is never stored
+  tokenHash  String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  ip         String?
+  userAgent  String?
+  createdAt  DateTime @default(now())
+  lastSeenAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+enum AuthTokenPurpose {
+  PASSWORD_RESET
+  EMAIL_VERIFY
+}
+
+model AuthToken {
+  id        String           @id @default(cuid())
+  tokenHash String           @unique
+  purpose   AuthTokenPurpose
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, purpose])
+}
+
+model RateLimit {
+  key         String   @id
+  count       Int      @default(0)
+  windowStart DateTime @default(now())
+}
+
+model Address {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  label     String   @default("Home")
+  recipient String
+  phone     String
+  line1     String
+  line2     String?
+  city      String
+  state     String
+  notes     String?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+}
+
+// ─── Catalogue ────────────────────────────────────────────────────
+
+enum ProductClass {
+  OTC           // general sale: can be bought online
+  PHARMACY_ONLY // pharmacist-supervised: shown for information, supplied through the pharmacist
+  PRESCRIPTION  // prescription-only: never sold through the cart
+}
+
+/// Where a product photograph came from and whether the pharmacy may publish it
+enum ImageRights {
+  NONE                  // no photograph yet
+  CLIENT_SUPPLIED       // supplied by the pharmacy or its agency; the original owner's permission is not confirmed
+  MANUFACTURER_APPROVED // the manufacturer or its authorised distributor has permitted use
+  LICENSED              // licensed or bought from a photo library
+  OWN_PHOTO             // photographed by the pharmacy
+}
+
+/// How far the medical information on a product page has been checked against the pack, leaflet or regulator
+enum InfoStatus {
+  AWAITING    // nothing checked; the page tells customers to read the pack and ask the pharmacist
+  PROVISIONAL // taken from a retailer listing or another market's leaflet; kept for staff, not shown as label text
+  VERIFIED    // checked against the product's own label, leaflet or regulator record
+}
+
+enum PublishStatus {
+  DRAFT
+  PUBLISHED
+}
+
+model Category {
+  id        String     @id @default(cuid())
+  slug      String     @unique
+  name      String
+  blurb     String     @default("")
+  /// Key of the line illustration used for the category tile
+  art       String     @default("pill")
+  parentId  String?
+  parent    Category?  @relation("CategoryTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children  Category[] @relation("CategoryTree")
+  sortOrder Int        @default(0)
+  visible   Boolean    @default(true)
+  products  Product[]
+
+  @@index([parentId])
+}
+
+model Product {
+  id             String        @id @default(cuid())
+  slug           String        @unique
+  sku            String        @unique
+  barcode        String?
+  name           String
+  brand          String?
+  categoryId     String
+  category       Category      @relation(fields: [categoryId], references: [id])
+  summary        String
+  /// Markdown
+  description    String        @default("")
+  howToUse       String?
+  warnings       String?
+  ingredients    String?
+  manufacturer   String?
+  /// Active ingredient(s) with amounts as printed on the label
+  activeIngredients String?
+  /// Strength or concentration, for example "500mg" or "1450ppm fluoride"
+  strength       String?
+  storage        String?
+  /// False while the exact brand stocked has not been confirmed by the pharmacy
+  brandConfirmed Boolean       @default(false)
+  infoStatus     InfoStatus    @default(AWAITING)
+  /// Where the information came from (leaflet, label, regulator, retailer) and what is still to confirm
+  infoSource     String?
+  /// Regulator registration number, shown only when the pharmacy has supplied it
+  nafdacNumber   String?
+  classification ProductClass  @default(OTC)
+  packSize       String?
+  /// Products sharing a group key are shown as alternative pack sizes of one item
+  groupKey       String?
+  priceKobo      Int
+  /// Previous price, shown struck through when higher than the price
+  compareAtKobo  Int?
+  stock          Int           @default(0)
+  reorderLevel   Int           @default(5)
+  maxPerOrder    Int           @default(10)
+  status         PublishStatus @default(DRAFT)
+  featured       Boolean       @default(false)
+  /// Sample catalogue entry (demonstration mode only). Never shown in live mode.
+  isDemo         Boolean       @default(false)
+  /// Uploaded product photograph (a public Document in the "media" section); when absent the line illustration for `art` is used
+  imageId        String?
+  /// Photograph bundled with the site (path under /public). Used when no uploaded photo has replaced it.
+  photo          String?
+  /// Further photographs: bundled paths or /media/<id> links
+  gallery        String[]
+  /// Alt text describing the photograph (what the pack looks like)
+  imageAlt       String?
+  /// Where the photograph came from, and the permission status
+  imageSource    String?
+  imageRights    ImageRights   @default(NONE)
+  /// The market printed on the pictured pack, when it is not Nigeria
+  packMarket     String?
+  /// Prices stay provisional until a manager confirms them; unconfirmed live products cannot be published
+  priceConfirmed Boolean       @default(false)
+  art            String        @default("pill")
+  tags           String[]
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  cartItems      CartItem[]
+  orderItems     OrderItem[]
+  favourites     Favourite[]
+  movements      StockMovement[]
+  enquiries      Enquiry[]
+
+  @@index([categoryId, status])
+  @@index([status, featured])
+  @@index([groupKey])
+}
+
+model StockMovement {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  /// Positive adds stock, negative removes it
+  delta     Int
+  /// RESTOCK | SALE | ADJUSTMENT | RETURN | CANCELLATION | DAMAGE | OPENING
+  reason    String
+  balance   Int
+  orderId   String?
+  note      String?
+  actorId   String?
+  actorLabel String  @default("System")
+  createdAt DateTime @default(now())
+
+  @@index([productId, createdAt])
+  @@index([orderId])
+}
+
+model Favourite {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, productId])
+}
+
+// ─── Cart and orders ──────────────────────────────────────────────
+
+model Cart {
+  id        String     @id @default(cuid())
+  /// SHA-256 of the opaque cookie token
+  tokenHash String     @unique
+  userId    String?
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  couponCode String?
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  items     CartItem[]
+
+  @@index([userId])
+  @@index([updatedAt])
+}
+
+model CartItem {
+  cartId    String
+  cart      Cart     @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  quantity  Int
+
+  @@id([cartId, productId])
+}
+
+model DeliveryZone {
+  id          String  @id @default(cuid())
+  name        String
+  /// Plain-language list of the areas covered
+  areas       String  @default("")
+  feeKobo     Int
+  /// Delivery is free when the goods total reaches this amount
+  freeOverKobo Int?
+  etaText     String  @default("")
+  active      Boolean @default(true)
+  sortOrder   Int     @default(0)
+}
+
+enum OrderStatus {
+  AWAITING_PAYMENT // created, payment not yet confirmed by the gateway. Not an order for the pharmacy yet.
+  PLACED           // payment confirmed (or pay-on-delivery/pickup accepted): ready for the pharmacy to process
+  PROCESSING
+  READY            // ready for collection
+  OUT_FOR_DELIVERY
+  COMPLETED
+  CANCELLED
+  EXPIRED          // unpaid and released
+}
+
+enum PaymentStatus {
+  UNPAID
+  PENDING
+  PAID
+  FAILED
+  CANCELLED
+  REFUNDED
+}
+
+enum PaymentMethod {
+  PAYSTACK
+  ON_DELIVERY // pay by cash or transfer when the order is handed over (delivery or pickup)
+}
+
+enum Fulfilment {
+  DELIVERY
+  PICKUP
+}
+
+model Order {
+  id             String        @id @default(cuid())
+  /// Human reference such as RP-100012
+  number         String        @unique
+  /// Public tracking token used in confirmation links
+  trackToken     String        @unique
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  status         OrderStatus   @default(AWAITING_PAYMENT)
+  paymentStatus  PaymentStatus @default(UNPAID)
+  paymentMethod  PaymentMethod
+  fulfilment     Fulfilment
+  customerName   String
+  email          String
+  phone          String
+  shipLine1      String?
+  shipLine2      String?
+  shipCity       String?
+  shipState      String?
+  shipNotes      String?
+  zoneName       String?
+  subtotalKobo   Int
+  discountKobo   Int           @default(0)
+  deliveryKobo   Int           @default(0)
+  totalKobo      Int
+  couponCode     String?
+  customerNote   String?
+  staffNote      String?
+  marketingOptIn Boolean       @default(false)
+  /// Customer agreed to order updates by text message
+  smsOptIn       Boolean       @default(false)
+  /// AWAITING_PAYMENT orders hold their stock until this time, then expire
+  expiresAt      DateTime?
+  paidAt         DateTime?
+  completedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  items          OrderItem[]
+  events         OrderEvent[]
+  transactions   PaymentTransaction[]
+
+  @@index([status, createdAt])
+  @@index([userId, createdAt])
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String?
+  product   Product? @relation(fields: [productId], references: [id], onDelete: SetNull)
+  name      String
+  sku       String
+  packSize  String?
+  quantity  Int
+  unitKobo  Int
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+model OrderEvent {
+  id         String   @id @default(cuid())
+  orderId    String
+  order      Order    @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  /// Status or payment label at the time
+  label      String
+  note       String?
+  actorId    String?
+  actorLabel String   @default("System")
+  createdAt  DateTime @default(now())
+
+  @@index([orderId, createdAt])
+}
+
+enum TransactionStatus {
+  INITIATED
+  SUCCESS
+  FAILED
+  ABANDONED
+}
+
+model PaymentTransaction {
+  id              String            @id @default(cuid())
+  orderId         String
+  order           Order             @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  provider        String            @default("paystack")
+  /// Our reference, sent to the gateway. Unique so a payment can be matched exactly once.
+  reference       String            @unique
+  amountKobo      Int
+  status          TransactionStatus @default(INITIATED)
+  channel         String?
+  gatewayMessage  String?
+  paidAmountKobo  Int?
+  verifiedAt      DateTime?
+  createdAt       DateTime          @default(now())
+
+  @@index([orderId])
+}
+
+/// Gateway callbacks already processed, so a repeated delivery changes nothing
+model WebhookEvent {
+  key       String   @id
+  provider  String
+  createdAt DateTime @default(now())
+}
+
+model Coupon {
+  id              String    @id @default(cuid())
+  code            String    @unique
+  description     String    @default("")
+  /// PERCENT (value is whole percent) or FIXED (value is kobo)
+  kind            String    @default("PERCENT")
+  value           Int
+  minSubtotalKobo Int       @default(0)
+  startsAt        DateTime?
+  endsAt          DateTime?
+  usageLimit      Int?
+  usedCount       Int       @default(0)
+  active          Boolean   @default(true)
+  createdAt       DateTime  @default(now())
+}
+
+// ─── Prescriptions, enquiries and services ────────────────────────
+
+enum RxStatus {
+  RECEIVED
+  IN_REVIEW
+  NEEDS_INFO
+  READY      // the pharmacist has reviewed it and the customer has been told what happens next
+  DECLINED
+  COMPLETED
+  CANCELLED
+}
+
+model Prescription {
+  id            String    @id @default(cuid())
+  /// Human reference such as RX-100004
+  number        String    @unique
+  trackToken    String    @unique
+  userId        String?
+  user          User?     @relation("RxOwner", fields: [userId], references: [id], onDelete: SetNull)
+  name          String
+  email         String
+  phone         String
+  /// What the customer wants to do (collect, delivery, or ask about availability)
+  preference    String    @default("PICKUP")
+  customerNote  String?
+  /// Visible to the customer
+  pharmacistNote String?
+  status        RxStatus  @default(RECEIVED)
+  assigneeId    String?
+  assignee      User?     @relation("RxAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  documents     Document[]
+  events        PrescriptionEvent[]
+
+  @@index([status, createdAt])
+  @@index([email])
+}
+
+model PrescriptionEvent {
+  id             String       @id @default(cuid())
+  prescriptionId String
+  prescription   Prescription @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  label          String
+  note           String?
+  actorLabel     String       @default("System")
+  createdAt      DateTime     @default(now())
+
+  @@index([prescriptionId, createdAt])
+}
+
+enum EnquiryType {
+  GENERAL
+  PRODUCT
+  SERVICE
+  FEEDBACK
+  COMPLAINT
+}
+
+enum EnquiryStatus {
+  NEW
+  IN_PROGRESS
+  RESOLVED
+}
+
+model Enquiry {
+  id         String        @id @default(cuid())
+  number     String        @unique
+  type       EnquiryType   @default(GENERAL)
+  name       String
+  email      String
+  phone      String?
+  message    String
+  productId  String?
+  product    Product?      @relation(fields: [productId], references: [id], onDelete: SetNull)
+  serviceSlug String?
+  status     EnquiryStatus @default(NEW)
+  staffNote  String?
+  assigneeId String?
+  assignee   User?         @relation("EnquiryAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  createdAt  DateTime      @default(now())
+  resolvedAt DateTime?
+
+  @@index([status, createdAt])
+}
+
+model PharmacyService {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  title       String
+  summary     String
+  /// Markdown
+  description String   @default("")
+  benefits    String[]
+  conditions  String?
+  /// ENQUIRY | PRESCRIPTION | CONTACT
+  action      String   @default("ENQUIRY")
+  ctaLabel    String   @default("Ask about this service")
+  icon        String   @default("pill")
+  /// A service appears on the website only after the pharmacy confirms it provides it
+  confirmed   Boolean  @default(false)
+  sortOrder   Int      @default(0)
+  isDemo      Boolean  @default(false)
+}
+
+// ─── Documents ────────────────────────────────────────────────────
+
+enum ScanStatus {
+  PENDING    // waiting for the scanner
+  CLEAN
+  INFECTED   // quarantined: never served
+  ERROR      // scanner unavailable or failed: never served until a rescan succeeds
+  UNSCANNED  // uploaded before scanning existed
+}
+
+enum DocumentVisibility {
+  INTERNAL   // staff only
+  CUSTOMER   // staff and the customer who owns it
+  PUBLIC     // published (website photographs)
+}
+
+model Document {
+  id             String             @id @default(cuid())
+  storageKey     String             @unique
+  originalName   String
+  mimeType       String
+  sizeBytes      Int
+  sha256         String
+  visibility     DocumentVisibility @default(INTERNAL)
+  /// Photo description (alt text) for media; a label for other files
+  title          String?
+  prescriptionId String?
+  prescription   Prescription?      @relation(fields: [prescriptionId], references: [id], onDelete: Cascade)
+  uploadedById   String?
+  uploadedByLabel String
+  /// "media" for the photo library
+  section        String?
+  scanStatus     ScanStatus         @default(PENDING)
+  /// "clamav" (a clamd daemon) or "builtin" (signature and file-structure checks only)
+  scanEngine     String?
+  scanDetail     String?
+  scannedAt      DateTime?
+  createdAt      DateTime           @default(now())
+
+  @@index([prescriptionId])
+  @@index([visibility])
+  @@index([scanStatus])
+  @@index([section])
+}
+
+// ─── Website content ──────────────────────────────────────────────
+
+model Article {
+  id          String        @id @default(cuid())
+  slug        String        @unique
+  title       String
+  excerpt     String
+  /// Markdown
+  body        String
+  category    String        @default("Everyday health")
+  art         String        @default("leaf")
+  imageId     String?
+  status      PublishStatus @default(DRAFT)
+  /// Shown on the article only when a named professional has reviewed it
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  needsReview Boolean       @default(true)
+  readMinutes Int           @default(4)
+  /// [{ title, url }] public guidance the article draws on
+  sources     Json          @default("[]")
+  publishedAt DateTime?
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([status, publishedAt])
+}
+
+model Faq {
+  id        String   @id @default(cuid())
+  question  String
+  answer    String
+  category  String   @default("General")
+  sortOrder Int      @default(0)
+  visible   Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
+
+model Testimonial {
+  id        String   @id @default(cuid())
+  name      String
+  detail    String?
+  quote     String
+  /// Shown publicly only after the pharmacy has the customer's permission and ticks this
+  approved  Boolean  @default(false)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+model Promotion {
+  id         String    @id @default(cuid())
+  title      String
+  body       String    @default("")
+  ctaLabel   String    @default("Shop now")
+  ctaHref    String    @default("/shop")
+  /// MINT | GREEN | RED
+  tone       String    @default("MINT")
+  couponCode String?
+  startsAt   DateTime?
+  endsAt     DateTime?
+  visible    Boolean   @default(false)
+  sortOrder  Int       @default(0)
+  createdAt  DateTime  @default(now())
+}
+
+model SiteSetting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+  updatedBy String?
+}
+
+// ─── Notifications, jobs, integrations, audit ─────────────────────
+
+enum NotificationStatus {
+  QUEUED
+  SENT
+  FAILED
+  SKIPPED
+}
+
+model NotificationEvent {
+  id                String             @id @default(cuid())
+  type              String
+  channel           String             @default("EMAIL")
+  toAddress         String
+  subject           String
+  body              String
+  status            NotificationStatus @default(QUEUED)
+  provider          String?
+  providerMessageId String?
+  error             String?
+  /// Order, prescription or enquiry id the message relates to
+  refId             String?
+  attempts          Int                @default(0)
+  createdAt         DateTime           @default(now())
+  sentAt            DateTime?
+
+  @@index([status, createdAt])
+  @@index([refId])
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+model Job {
+  id          String    @id @default(cuid())
+  type        String
+  payload     Json      @default("{}")
+  status      JobStatus @default(PENDING)
+  runAt       DateTime  @default(now())
+  attempts    Int       @default(0)
+  maxAttempts Int       @default(5)
+  lockedAt    DateTime?
+  lastError   String?
+  dedupeKey   String?   @unique
+  createdAt   DateTime  @default(now())
+  finishedAt  DateTime?
+
+  @@index([status, runAt])
+}
+
+model Integration {
+  id            String   @id @default(cuid())
+  key           String   @unique
+  name          String
+  category      String
+  enabled       Boolean  @default(false)
+  config        Json     @default("{}")
+  /// AES-256-GCM encrypted JSON of secret values, keyed by APP_SECRET
+  secretEnc     String?
+  lastCheckedAt DateTime?
+  lastStatus    String?
+  lastMessage   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  logs          IntegrationLog[]
+}
+
+model IntegrationLog {
+  id            String      @id @default(cuid())
+  integrationId String
+  integration   Integration @relation(fields: [integrationId], references: [id], onDelete: Cascade)
+  event         String
+  status        String
+  requestSummary  String?
+  responseSummary String?
+  error         String?
+  durationMs    Int?
+  createdAt     DateTime    @default(now())
+
+  @@index([integrationId, createdAt])
+}
+
+model AuditEvent {
+  id         String   @id @default(cuid())
+  actorId    String?
+  actorLabel String
+  action     String
+  entityType String
+  entityId   String?
+  meta       Json?
+  ip         String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+  @@index([createdAt])
+}
+
+model Counter {
+  key   String @id
+  value Int    @default(0)
+}

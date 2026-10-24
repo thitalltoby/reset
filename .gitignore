@@ -1,0 +1,15 @@
+node_modules
+.next
+.env
+storage
+src/generated
+*.tsbuildinfo
+playwright-report
+test-results
+next-env.d.ts
+.env.*
+!.env.example
+.DS_Store
+uploads
+# 8 MB static snapshot used only to compare the build against; not needed to run the site
+_reference

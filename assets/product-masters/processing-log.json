@@ -1,0 +1,254 @@
+{
+ "benylin-dry-cough-syrup": {
+  "src": "94186287-image.png",
+  "srcSize": [
+   1125,
+   1125
+  ],
+  "mode": "trim-only",
+  "ringBg": 0.0,
+  "trim": [
+   342,
+   286,
+   773,
+   840
+  ],
+  "scale": 1.25,
+  "limitedUpscale": true,
+  "kb": 45
+ },
+ "omron-flex-temp-digital-thermometer": {
+  "src": "23939b4d-image.png",
+  "srcSize": [
+   900,
+   900
+  ],
+  "mode": "trim-only",
+  "ringBg": 0.0,
+  "trim": [
+   47,
+   230,
+   853,
+   680
+  ],
+  "scale": 0.87,
+  "limitedUpscale": false,
+  "kb": 11
+ },
+ "mb-paracetamol-500mg-tablets-8x12": {
+  "src": "1632c6bb-image.png",
+  "srcSize": [
+   3000,
+   3557
+  ],
+  "mode": "mb-backdrop",
+  "ringBg": 0.0,
+  "trim": [
+   30,
+   992,
+   2873,
+   3015
+  ],
+  "scale": 0.25,
+  "limitedUpscale": false,
+  "kb": 91
+ },
+ "flo-baby-saline-nasal-drops-15ml": {
+  "src": "4b6e2673-image.png",
+  "srcSize": [
+   600,
+   600
+  ],
+  "mode": "trim-only",
+  "ringBg": 0.0,
+  "trim": [
+   147,
+   5,
+   464,
+   560
+  ],
+  "scale": 1.25,
+  "limitedUpscale": true,
+  "kb": 51
+ },
+ "dettol-antiseptic-liquid-100ml": {
+  "src": "27c5ff7f-image.png",
+  "srcSize": [
+   1080,
+   1080
+  ],
+  "mode": "trim-only",
+  "ringBg": 0.0,
+  "trim": [
+   148,
+   8,
+   937,
+   1080
+  ],
+  "scale": 0.65,
+  "limitedUpscale": false,
+  "kb": 29
+ },
+ "dr-max-vitamin-c-500mg-effervescent-20": {
+  "src": "33e7d4c3-image.png",
+  "srcSize": [
+   700,
+   700
+  ],
+  "mode": "trim-only",
+  "ringBg": 0.0,
+  "trim": [
+   263,
+   23,
+   473,
+   661
+  ],
+  "scale": 1.1,
+  "limitedUpscale": false,
+  "kb": 16
+ },
+ "trioral-oral-rehydration-salts-sachet": {
+  "src": "48835ffb-image.png",
+  "srcSize": [
+   1000,
+   1000
+  ],
+  "mode": "trim-only",
+  "ringBg": 0.0,
+  "trim": [
+   188,
+   61,
+   831,
+   959
+  ],
+  "scale": 0.78,
+  "limitedUpscale": false,
+  "kb": 49
+ },
+ "bristol-paracetamol-500mg-tablets-16": {
+  "src": "e98cdbb1-image.png",
+  "srcSize": [
+   1041,
+   1041
+  ],
+  "mode": "trim-only",
+  "ringBg": 0.0,
+  "trim": [
+   83,
+   15,
+   957,
+   945
+  ],
+  "scale": 0.75,
+  "limitedUpscale": false,
+  "kb": 31
+ },
+ "tesco-health-fabric-plasters-light-40": {
+  "src": "a56c58f2-image.png",
+  "srcSize": [
+   960,
+   960
+  ],
+  "mode": "trim-only",
+  "ringBg": 0.0,
+  "trim": [
+   182,
+   18,
+   777,
+   940
+  ],
+  "scale": 0.76,
+  "limitedUpscale": false,
+  "kb": 43
+ },
+ "amodent-original-toothpaste-100ml": {
+  "src": "2443a073-image.png",
+  "srcSize": [
+   2000,
+   2000
+  ],
+  "mode": "trim-only",
+  "ringBg": 0.0,
+  "trim": [
+   135,
+   1121,
+   1864,
+   1865
+  ],
+  "scale": 0.4,
+  "limitedUpscale": false,
+  "kb": 40
+ },
+ "rolaids-original-antacid-96-chewable": {
+  "src": "1bf72685-image.png",
+  "srcSize": [
+   1024,
+   1024
+  ],
+  "mode": "trim-only",
+  "ringBg": 0.0,
+  "trim": [
+   118,
+   37,
+   908,
+   999
+  ],
+  "scale": 0.73,
+  "limitedUpscale": false,
+  "kb": 28
+ },
+ "burnaid-burn-gel-25g": {
+  "src": "d0c50d5a-image.png",
+  "srcSize": [
+   1280,
+   1280
+  ],
+  "mode": "trim-only",
+  "ringBg": 0.0,
+  "trim": [
+   247,
+   29,
+   1032,
+   1255
+  ],
+  "scale": 0.57,
+  "limitedUpscale": false,
+  "kb": 44
+ },
+ "coldcap-original-capsules-12": {
+  "src": "5c99c786-image.png",
+  "srcSize": [
+   680,
+   680
+  ],
+  "mode": "trim-only",
+  "ringBg": 0.0,
+  "trim": [
+   85,
+   173,
+   680,
+   510
+  ],
+  "scale": 1.18,
+  "limitedUpscale": false,
+  "kb": 25
+ },
+ "zyrtec-allergy-cetirizine-10mg-30-tablets": {
+  "src": "482e0c57-image.png",
+  "srcSize": [
+   800,
+   800
+  ],
+  "mode": "trim-only",
+  "ringBg": 0.0,
+  "trim": [
+   44,
+   20,
+   756,
+   779
+  ],
+  "scale": 0.92,
+  "limitedUpscale": false,
+  "kb": 64
+ }
+}
